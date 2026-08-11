@@ -1,82 +1,75 @@
-"use client";
+import { login } from './actions'
 
-import { useState } from "react";
-import { createClient } from "../lib/supabase/client";
-
-export default function LoginPage() {
-  const supabase = createClient();
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
-
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-
-    setMessage("Logging in...");
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      setMessage("❌ " + error.message);
-      return;
-    }
-
-    setMessage("✅ Login successful!");
-
-    window.location.href = "/";
-  }
+// Staff/admin only — no signup form. Staff accounts are created via the
+// Supabase Dashboard (or a dedicated "add staff" screen later), not self-serve.
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
+  const { error } = await searchParams
 
   return (
-    <main style={{ padding: "40px", maxWidth: "400px", margin: "auto" }}>
-      <h1>Dairy Management System</h1>
+    <div
+      style={{
+        display: 'flex',
+        minHeight: '100vh',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: 'sans-serif',
+      }}
+    >
+      <form
+        action={login}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12,
+          width: 320,
+          padding: 24,
+          border: '1px solid #ddd',
+          borderRadius: 8,
+        }}
+      >
+        <h1 style={{ fontSize: 20, marginBottom: 8 }}>Dairy Dashboard</h1>
 
-      <h2>Login</h2>
+        {error === 'customer_accounts_not_supported' && (
+          <p style={{ color: 'red', fontSize: 14 }}>
+            This login is for staff/admin only. Customer accounts don&apos;t
+            have access here.
+          </p>
+        )}
+        {error && error !== 'customer_accounts_not_supported' && (
+          <p style={{ color: 'red', fontSize: 14 }}>{error}</p>
+        )}
 
-      <form onSubmit={handleLogin}>
-        <div style={{ marginBottom: "15px" }}>
-          <label>Email</label>
-          <br />
-
+        <label style={{ fontSize: 14 }}>
+          Email
           <input
             type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            name="email"
             required
-            style={{
-              width: "100%",
-              padding: "10px",
-              marginTop: "5px",
-            }}
+            style={{ width: '100%', padding: 8, marginTop: 4 }}
           />
-        </div>
+        </label>
 
-        <div style={{ marginBottom: "15px" }}>
-          <label>Password</label>
-          <br />
-
+        <label style={{ fontSize: 14 }}>
+          Password
           <input
             type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            name="password"
             required
-            style={{
-              width: "100%",
-              padding: "10px",
-              marginTop: "5px",
-            }}
+            style={{ width: '100%', padding: 8, marginTop: 4 }}
           />
-        </div>
+        </label>
 
-        <button type="submit">
-          Login
+        <button
+          type="submit"
+          style={{ padding: 10, marginTop: 8, cursor: 'pointer' }}
+        >
+          Log in
         </button>
       </form>
-
-      {message && <p>{message}</p>}
-    </main>
-  );
+    </div>
+  )
 }
