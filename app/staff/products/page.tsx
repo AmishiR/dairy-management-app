@@ -1,4 +1,6 @@
 import { createClient } from '@/app/lib/supabase/server'
+import { toggleProductActive } from './actions'
+import Link from 'next/link'
 
 export default async function ProductsPage() {
   const supabase = await createClient()
@@ -23,7 +25,15 @@ export default async function ProductsPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <h1 style={{ fontSize: 22 }}>Products</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h1 style={{ fontSize: 22 }}>Products</h1>
+        <Link
+          href="/staff/products/new"
+          style={{ padding: '8px 16px', border: '1px solid #333', borderRadius: 6, fontSize: 14 }}
+        >
+          + Add Product
+        </Link>
+      </div>
 
       <ProductTable title="Finished Goods" products={finishedGoods} />
       <ProductTable title="Raw Materials" products={rawMaterials} />
@@ -60,6 +70,7 @@ function ProductTable({
               <th style={{ padding: '8px 4px' }}>Category</th>
               <th style={{ padding: '8px 4px' }}>Unit</th>
               <th style={{ padding: '8px 4px' }}>Status</th>
+              <th style={{ padding: '8px 4px' }}></th>
             </tr>
           </thead>
           <tbody>
@@ -81,6 +92,16 @@ function ProductTable({
                   >
                     {p.active ? 'active' : 'inactive'}
                   </span>
+                </td>
+                <td style={{ padding: '8px 4px' }}>
+                  <form action={toggleProductActive.bind(null, p.product_id, p.active)}>
+                    <button
+                      type="submit"
+                      style={{ fontSize: 12, cursor: 'pointer', background: 'none', border: '1px solid #ccc', borderRadius: 4, padding: '2px 8px' }}
+                    >
+                      {p.active ? 'Deactivate' : 'Activate'}
+                    </button>
+                  </form>
                 </td>
               </tr>
             ))}

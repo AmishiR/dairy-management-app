@@ -1,10 +1,8 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/app/lib/supabase/server'
 import { logout } from '@/app/login/actions'
 
-// This wraps your existing app/staff/page.tsx automatically — Next.js
-// layouts apply to everything inside the same folder. You don't need to
-// change staff/page.tsx itself for this to take effect.
 export default async function StaffLayout({
   children,
 }: {
@@ -43,9 +41,11 @@ export default async function StaffLayout({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           <strong>Dairy Dashboard</strong>
-          <nav style={{ display: 'flex', gap: 16, fontSize: 14 }}>
-            <a href="/staff">Dashboard</a>
-            <a href="/staff/products">Products</a>
+          <nav style={{ display: 'flex', gap: 16, fontSize: 14, flexWrap: 'wrap' }}>
+            <Link href="/staff">Dashboard</Link>
+            <Link href="/staff/products">Products</Link>
+            <Link href="/staff/pricing/customer-prices">Customer Prices</Link>
+            <Link href="/staff/pricing/internal-costs">Internal Costs</Link>
           </nav>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
