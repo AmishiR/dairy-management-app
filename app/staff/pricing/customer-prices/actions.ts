@@ -12,9 +12,15 @@ export async function setCustomerPrice(formData: FormData) {
   const selling_price = Number(formData.get('selling_price'))
   const effective_from = formData.get('effective_from') as string
 
+  // Who is making this change — this is what gets shown in the price
+  // history so staff can see who set/changed each price.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   // Close out any currently-open price for this customer/product the day
-  // before the new one starts. Without this, the new insert would violate
-  // the EXCLUDE constraint that blocks overlapping price periods.
+  // before the new one starts, so the insert below doesn't violate the
+  // EXCLUDE constraint that blocks overlapping price periods.
   const dayBefore = new Date(effective_from)
   dayBefore.setDate(dayBefore.getDate() - 1)
   const dayBeforeStr = dayBefore.toISOString().slice(0, 10)
@@ -28,7 +34,9 @@ export async function setCustomerPrice(formData: FormData) {
     .lt('effective_from', effective_from)
 
   if (closeError) {
-    redirect(`/staff/pricing/customer-prices?error=${encodeURIComponent(closeError.message)}`)
+    redirect(
+      `/staff/pricing/customer-prices/${customer_id}?error=${encodeURIComponent(closeError.message)}`
+    )
   }
 
   const { error } = await supabase.from('customer_prices').insert({
@@ -36,12 +44,15 @@ export async function setCustomerPrice(formData: FormData) {
     product_id,
     selling_price,
     effective_from,
+    created_by: user?.id ?? null,
   })
 
   if (error) {
-    redirect(`/staff/pricing/customer-prices?error=${encodeURIComponent(error.message)}`)
+    redirect(
+      `/staff/pricing/customer-prices/${customer_id}?error=${encodeURIComponent(error.message)}`
+    )
   }
 
-  revalidatePath('/staff/pricing/customer-prices')
-  redirect('/staff/pricing/customer-prices')
+  revalidatePath(`/staff/pricing/customer-prices/${customer_id}`)
+  redirect(`/staff/pricing/customer-prices/${customer_id}`)
 }
