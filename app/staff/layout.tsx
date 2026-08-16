@@ -44,6 +44,8 @@ export default async function StaffLayout({
           <nav style={{ display: 'flex', gap: 16, fontSize: 14, flexWrap: 'wrap' }}>
             <Link href="/staff">Dashboard</Link>
             <Link href="/staff/products">Products</Link>
+            <Link href="/staff/orders">Orders</Link>
+            <Link href="/staff/deliveries">Deliveries</Link>
             <Link href="/staff/pricing/customer-prices">Customer Prices</Link>
             <Link href="/staff/pricing/internal-costs">Internal Costs</Link>
           </nav>

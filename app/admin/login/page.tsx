@@ -1,9 +1,7 @@
-import { login } from './actions'
+import { adminLogin } from './actions'
 import Link from 'next/link'
 
-// Staff/admin only — no signup form. Staff accounts are created via the
-// Admin Dashboard's "Add Staff" invite flow, not self-serve.
-export default async function LoginPage({
+export default async function AdminLoginPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>
@@ -21,28 +19,20 @@ export default async function LoginPage({
       }}
     >
       <form
-        action={login}
+        action={adminLogin}
         style={{
           display: 'flex',
           flexDirection: 'column',
           gap: 12,
           width: 320,
           padding: 24,
-          border: '1px solid #ddd',
+          border: '1px solid #333',
           borderRadius: 8,
         }}
       >
-        <h1 style={{ fontSize: 20, marginBottom: 8 }}>Dairy Dashboard</h1>
+        <h1 style={{ fontSize: 20, marginBottom: 8 }}>Admin Login</h1>
 
-        {error === 'customer_accounts_not_supported' && (
-          <p style={{ color: 'red', fontSize: 14 }}>
-            This login is for staff/admin only. Customer accounts don&apos;t
-            have access here.
-          </p>
-        )}
-        {error && error !== 'customer_accounts_not_supported' && (
-          <p style={{ color: 'red', fontSize: 14 }}>{error}</p>
-        )}
+        {error && <p style={{ color: 'red', fontSize: 14 }}>{error}</p>}
 
         <label style={{ fontSize: 14 }}>
           Email
@@ -65,12 +55,12 @@ export default async function LoginPage({
         </label>
 
         <button type="submit" style={{ padding: 10, marginTop: 8, cursor: 'pointer' }}>
-          Log in
+          Log in as Admin
         </button>
 
         <div style={{ textAlign: 'center', marginTop: 8 }}>
-          <Link href="/admin/login" style={{ fontSize: 13, color: '#2563eb' }}>
-            Login as Admin
+          <Link href="/login" style={{ fontSize: 13, color: '#2563eb' }}>
+            ← Back to staff login
           </Link>
         </div>
       </form>
