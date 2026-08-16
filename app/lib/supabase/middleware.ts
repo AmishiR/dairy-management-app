@@ -1,9 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-// This web app is staff/admin ONLY. There is no customer-facing area —
-// customers will use a separate mobile app later, connecting to this same
-// Supabase project directly with the customer-side RLS policies.
+// This web app is staff/admin only. Customers are still blocked entirely.
+// Staff can only reach /staff/**. Admin can reach both /staff/** and
+// /admin/** (admin has all staff functionality, plus /admin/staff for
+// inviting new staff).
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -32,8 +33,23 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname
 
-  // Not logged in -> only /login is reachable
-  if (!user && path !== '/login') {
+  // /set-password must be reachable by someone who just clicked an invite
+  // link — they have a session (from the invite token) but their role
+  // could still be anything at this exact moment, so don't gate this route
+  // on role at all, only on having a session.
+  if (path === '/set-password') {
+    if (!user) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
+    }
+    return supabaseResponse
+  }
+
+  const isPublicLoginPath = path === '/login' || path === '/admin/login'
+
+  // Not logged in -> only the two login pages are reachable
+  if (!user && !isPublicLoginPath) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
@@ -47,11 +63,12 @@ export async function updateSession(request: NextRequest) {
       .single()
 
     const role = profile?.role ?? 'customer'
-    const isStaff = role === 'staff' || role === 'admin'
+    const isAdmin = role === 'admin'
+    const isStaff = role === 'staff'
+    const isStaffOrAdmin = isStaff || isAdmin
 
-    // A customer account should never reach this app — sign out and bounce
-    // to /login with an explanatory message.
-    if (!isStaff && path !== '/login') {
+    // Customer accounts never belong in this app at all.
+    if (!isStaffOrAdmin && !isPublicLoginPath) {
       await supabase.auth.signOut()
       const url = request.nextUrl.clone()
       url.pathname = '/login'
@@ -59,9 +76,24 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
-    // Staff/admin visiting root or /login while already authenticated ->
-    // send them straight to their dashboard (your existing /staff route).
-    if (isStaff && (path === '/' || path === '/login')) {
+    // Staff can never reach /admin/** — including /admin/login while
+    // already authenticated as staff (nothing for them to do there).
+    if (path.startsWith('/admin') && isStaff) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/staff'
+      return NextResponse.redirect(url)
+    }
+
+    // Logged-in admin visiting /admin/login or the generic /login ->
+    // send straight to their dashboard, nothing to log in for.
+    if (isAdmin && (path === '/admin/login' || path === '/login' || path === '/')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/admin/dashboard'
+      return NextResponse.redirect(url)
+    }
+
+    // Logged-in staff visiting /login or root -> their dashboard.
+    if (isStaff && (path === '/login' || path === '/')) {
       const url = request.nextUrl.clone()
       url.pathname = '/staff'
       return NextResponse.redirect(url)
