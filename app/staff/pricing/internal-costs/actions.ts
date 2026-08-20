@@ -11,8 +11,15 @@ export async function setInternalCost(formData: FormData) {
   const cost_price = Number(formData.get('cost_price'))
   const effective_from = formData.get('effective_from') as string
 
-  // Same pattern as customer prices — close the currently-open cost the
-  // day before, so the new insert doesn't violate the no-overlap constraint.
+  // Who made this change — shown in the cost history, same accountability
+  // pattern as customer prices.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  // Close out any currently-open cost for this raw material the day before
+  // the new one starts, so the insert below doesn't violate the EXCLUDE
+  // constraint that blocks overlapping cost periods.
   const dayBefore = new Date(effective_from)
   dayBefore.setDate(dayBefore.getDate() - 1)
   const dayBeforeStr = dayBefore.toISOString().slice(0, 10)
@@ -25,19 +32,24 @@ export async function setInternalCost(formData: FormData) {
     .lt('effective_from', effective_from)
 
   if (closeError) {
-    redirect(`/staff/pricing/internal-costs?error=${encodeURIComponent(closeError.message)}`)
+    redirect(
+      `/staff/pricing/internal-costs/${product_id}?error=${encodeURIComponent(closeError.message)}`
+    )
   }
 
   const { error } = await supabase.from('internal_costs').insert({
     product_id,
     cost_price,
     effective_from,
+    created_by: user?.id ?? null,
   })
 
   if (error) {
-    redirect(`/staff/pricing/internal-costs?error=${encodeURIComponent(error.message)}`)
+    redirect(
+      `/staff/pricing/internal-costs/${product_id}?error=${encodeURIComponent(error.message)}`
+    )
   }
 
-  revalidatePath('/staff/pricing/internal-costs')
-  redirect('/staff/pricing/internal-costs')
+  revalidatePath(`/staff/pricing/internal-costs/${product_id}`)
+  redirect(`/staff/pricing/internal-costs/${product_id}`)
 }

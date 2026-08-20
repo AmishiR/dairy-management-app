@@ -22,7 +22,7 @@ export default function AppShell({
     { href: '/staff/products', label: 'Products' },
     { href: '/staff/pricing/customer-prices', label: 'Customer Prices' },
     { href: '/staff/pricing/internal-costs', label: 'Internal Costs' },
-    { href: '/admin/staff', label: 'Add New Staff' },
+    { href: '/staff/production', label: 'Production' },
   ]
 
   return (

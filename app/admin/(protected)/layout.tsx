@@ -2,7 +2,9 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/app/lib/supabase/server'
 import AppShell from '@/app/components/AppShell'
 
-export default async function StaffLayout({
+// Backup check — middleware already blocks non-admins from /admin/**, but
+// this layout verifies independently rather than relying on one layer.
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
@@ -14,7 +16,7 @@ export default async function StaffLayout({
   } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect('/login')
+    redirect('/admin/login')
   }
 
   const { data: profile } = await supabase
@@ -23,12 +25,16 @@ export default async function StaffLayout({
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'staff' && profile?.role !== 'admin') {
-    redirect('/login')
+  if (profile?.role !== 'admin') {
+    redirect('/staff')
   }
 
   return (
-    <AppShell displayName={profile?.full_name ?? user.email ?? ''} role={profile?.role ?? 'staff'}>
+    <AppShell
+      displayName={profile?.full_name ?? user.email ?? ''}
+      role="admin"
+      extraNavLinks={[{ href: '/admin/staff', label: 'Add Staff' }]}
+    >
       {children}
     </AppShell>
   )
