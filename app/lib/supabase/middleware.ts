@@ -1,10 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-// This web app is staff/admin only. Customers are still blocked entirely.
-// Staff can only reach /staff/**. Admin can reach both /staff/** and
-// /admin/** (admin has all staff functionality, plus /admin/staff for
-// inviting new staff).
+// UNIFIED MODEL: staff and admin share the exact same pages under /staff.
+// The only admin-exclusive route left is /admin/staff (Add Staff). There is
+// no separate /admin/dashboard anymore — admin logs in and lands on /staff,
+// same as everyone else, with one extra nav link.
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -33,10 +33,6 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname
 
-  // /set-password must be reachable by someone who just clicked an invite
-  // link — they have a session (from the invite token) but their role
-  // could still be anything at this exact moment, so don't gate this route
-  // on role at all, only on having a session.
   if (path === '/set-password') {
     if (!user) {
       const url = request.nextUrl.clone()
@@ -48,7 +44,6 @@ export async function updateSession(request: NextRequest) {
 
   const isPublicLoginPath = path === '/login' || path === '/admin/login'
 
-  // Not logged in -> only the two login pages are reachable
   if (!user && !isPublicLoginPath) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
@@ -76,24 +71,17 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
-    // Staff can never reach /admin/** — including /admin/login while
-    // already authenticated as staff (nothing for them to do there).
-    if (path.startsWith('/admin') && isStaff) {
+    // A plain staff account can never reach anything under /admin/**
+    // (except /admin/login itself, which is already public above).
+    if (path.startsWith('/admin') && path !== '/admin/login' && isStaff) {
       const url = request.nextUrl.clone()
       url.pathname = '/staff'
       return NextResponse.redirect(url)
     }
 
-    // Logged-in admin visiting /admin/login or the generic /login ->
-    // send straight to their dashboard, nothing to log in for.
-    if (isAdmin && (path === '/admin/login' || path === '/login' || path === '/')) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/admin/dashboard'
-      return NextResponse.redirect(url)
-    }
-
-    // Logged-in staff visiting /login or root -> their dashboard.
-    if (isStaff && (path === '/login' || path === '/')) {
+    // Everyone — staff AND admin — lands on the SAME /staff dashboard.
+    // No separate admin dashboard to route to anymore.
+    if (isStaffOrAdmin && (path === '/login' || path === '/admin/login' || path === '/')) {
       const url = request.nextUrl.clone()
       url.pathname = '/staff'
       return NextResponse.redirect(url)

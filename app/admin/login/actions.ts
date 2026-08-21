@@ -28,8 +28,6 @@ export async function adminLogin(formData: FormData) {
     .single()
 
   if (profile?.role !== 'admin') {
-    // Do not leave them signed in with valid credentials but no access —
-    // sign out immediately rather than just blocking the redirect.
     await supabase.auth.signOut()
     redirect(
       `/admin/login?error=${encodeURIComponent(
@@ -38,5 +36,8 @@ export async function adminLogin(formData: FormData) {
     )
   }
 
-  redirect('/admin/dashboard')
+  // Unified model: admin lands on the SAME dashboard as staff, not a
+  // separate /admin/dashboard. Their extra "Add Staff" link shows up
+  // automatically there because staff/layout.tsx checks the real role.
+  redirect('/staff')
 }

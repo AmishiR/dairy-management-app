@@ -1,8 +1,11 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/app/lib/supabase/server'
-import { logout } from '@/app/login/actions'
+import AppShell from '@/app/components/AppShell'
 
+// This is now the ONE dashboard layout for BOTH staff and admin. The only
+// difference between what a staff vs. admin user sees here is the
+// "Add Staff" nav link — added automatically below when role === 'admin'.
+// There is no separate admin layout/dashboard anymore.
 export default async function StaffLayout({
   children,
 }: {
@@ -28,41 +31,16 @@ export default async function StaffLayout({
     redirect('/login')
   }
 
+  const extraNavLinks =
+    profile?.role === 'admin' ? [{ href: '/admin/staff', label: 'Add Staff' }] : []
+
   return (
-    <div style={{ fontFamily: 'sans-serif' }}>
-      <header
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '12px 24px',
-          borderBottom: '1px solid #ddd',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-          <strong>Dairy Dashboard</strong>
-          <nav style={{ display: 'flex', gap: 16, fontSize: 14, flexWrap: 'wrap' }}>
-            <Link href="/staff">Dashboard</Link>
-            <Link href="/staff/products">Products</Link>
-            <Link href="/staff/orders">Orders</Link>
-            <Link href="/staff/deliveries">Deliveries</Link>
-            <Link href="/staff/pricing/customer-prices">Customer Prices</Link>
-            <Link href="/staff/pricing/internal-costs">Internal Costs</Link>
-            <Link href="/staff/production">Production</Link>
-          </nav>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 14, color: '#555' }}>
-            {profile?.full_name ?? user.email} ({profile?.role})
-          </span>
-          <form action={logout}>
-            <button type="submit" style={{ cursor: 'pointer' }}>
-              Log out
-            </button>
-          </form>
-        </div>
-      </header>
-      <main style={{ padding: 24 }}>{children}</main>
-    </div>
+    <AppShell
+      displayName={profile?.full_name ?? user.email ?? ''}
+      role={profile?.role ?? 'staff'}
+      extraNavLinks={extraNavLinks}
+    >
+      {children}
+    </AppShell>
   )
 }

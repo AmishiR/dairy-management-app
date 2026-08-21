@@ -2,10 +2,9 @@ import { logout } from '@/app/login/actions'
 
 type NavLink = { href: string; label: string }
 
-// Shared shell for both /staff and /admin — same header, same base nav
-// links, with room for role-specific extras (e.g. admin's "Add Staff").
-// This is what lets the admin dashboard look and behave like the staff
-// dashboard without duplicating the layout code.
+// Shared shell for the (now unified) dashboard. Base links are the same
+// for everyone; extraNavLinks is how role-specific extras (Add Staff, for
+// admin) get added on top — passed in by the layout that renders this.
 export default function AppShell({
   displayName,
   role,
@@ -18,7 +17,7 @@ export default function AppShell({
   children: React.ReactNode
 }) {
   const baseNavLinks: NavLink[] = [
-    { href: role === 'admin' ? '/admin/dashboard' : '/staff', label: 'Dashboard' },
+    { href: '/staff', label: 'Dashboard' },
     { href: '/staff/products', label: 'Products' },
     { href: '/staff/pricing/customer-prices', label: 'Customer Prices' },
     { href: '/staff/pricing/internal-costs', label: 'Internal Costs' },
