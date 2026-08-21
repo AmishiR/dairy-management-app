@@ -27,9 +27,26 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let user = null
+  try {
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser()
+    user = authUser
+  } catch {
+    // Supabase itself is unreachable (network error, outage — not your
+    // server). Don't crash the request; treat as logged-out and let the
+    // login page's own error handling show something reasonable, rather
+    // than an unhandled exception taking down every page.
+    const path = request.nextUrl.pathname
+    if (path !== '/login' && path !== '/admin/login') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      url.searchParams.set('error', 'auth_service_unavailable')
+      return NextResponse.redirect(url)
+    }
+    return supabaseResponse
+  }
 
   const path = request.nextUrl.pathname
 
