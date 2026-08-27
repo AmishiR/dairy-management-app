@@ -84,7 +84,10 @@ Production and receipts go through atomic Postgres functions called via `.rpc()`
 
 ### Dispatch → deliveries
 
-Deliveries are created **only** through Dispatch (`/staff/dispatch`), never by hand. The flow: pick an open order → `app/staff/dispatch/[orderId]/DispatchForm.tsx` (client) shows each undelivered line with its product's production batches oldest-first, pre-fills an allocation, and lets staff edit it → `confirmDispatch` calls the `confirm_dispatch()` RPC.
+Deliveries are created **only** through Dispatch (`/staff/dispatch`), never by hand. The flow: pick an open order → `app/staff/dispatch/[orderId]/DispatchForm.tsx` (client) shows each undelivered line and → `confirmDispatch` calls the `confirm_dispatch()` RPC. Each line is one of two modes:
+
+- **batch** (`product.is_raw_material === false`) — manufactured finished good. The form lists the product's production batches oldest-first, pre-fills an allocation, and staff can edit it; the per-batch amounts must sum to the dispatch quantity. Writes `dispatch_allocations` rows.
+- **direct** (`product.is_raw_material === true`) — resold raw material (cow milk, buffalo milk, dahi). No batch picker; staff just enter a quantity, validated against `inventory_balances.current_stock`. No `dispatch_allocations` rows — the `delivery_items` insert alone deducts stock via the trigger.
 
 Stock deduction is **not** done by the RPC. Inserting `delivery_items` fires the existing `fn_apply_delivery_item()` trigger, which bumps `order_items.quantity_delivered`, writes the `'delivered'` `inventory_transactions` row (→ `fn_apply_inventory_balance()` decrements product-level `inventory_balances`), and rolls `orders.status` to `partially_delivered`/`delivered`. `confirm_dispatch()` only adds `dispatch_allocations` rows (which batch fed which delivery line) and validates each batch isn't over-allocated. Per-batch remaining stock is derived in the app as `production_batches.quantity_produced − Σ dispatch_allocations.quantity` (no DB view). The migration is `app/supabse/migrations/dispatch.sql`; run it in the SQL Editor (it ends with `notify pgrst, 'reload schema'` so the new table/function show up over the API immediately).
 

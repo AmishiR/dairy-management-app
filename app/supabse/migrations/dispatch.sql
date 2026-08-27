@@ -51,13 +51,19 @@ grant select, insert, update, delete on public.dispatch_allocations to authentic
 -- confirm_dispatch(): create one delivery for an order, splitting each
 -- delivered line across one or more production batches.
 --
--- p_lines shape:
---   [
---     { "order_item_id": "<uuid>",
---       "allocations": [ { "batch_id": "<uuid>", "quantity": 15 },
---                        { "batch_id": "<uuid>", "quantity": 5 } ] },
---     ...
---   ]
+-- p_lines shape — two kinds of line:
+--   * manufactured finished goods, split across production batches:
+--       { "order_item_id": "<uuid>",
+--         "allocations": [ { "batch_id": "<uuid>", "quantity": 15 },
+--                          { "batch_id": "<uuid>", "quantity": 5 } ] }
+--   * resold raw materials (cow milk, buffalo milk, dahi …) taken straight
+--     from stock, no batch:
+--       { "order_item_id": "<uuid>", "quantity": 20 }
+--
+-- A line with a non-empty "allocations" array is batch-tracked; otherwise
+-- "quantity" is used and no dispatch_allocations rows are written. Either
+-- way the delivery_items insert deducts inventory_balances through the
+-- existing fn_apply_delivery_item() trigger, which also blocks negatives.
 --
 -- The whole thing runs in one transaction: any validation failure (batch
 -- over-allocated, wrong product, line exceeds the outstanding order qty,
@@ -130,12 +136,16 @@ begin
       raise exception 'Order item % does not belong to order %', v_order_item_id, p_order_id;
     end if;
 
-    select coalesce(sum((a->>'quantity')::numeric), 0)
-    into v_line_qty
-    from jsonb_array_elements(v_line->'allocations') a;
+    if jsonb_array_length(coalesce(v_line->'allocations', '[]'::jsonb)) > 0 then
+      select coalesce(sum((a->>'quantity')::numeric), 0)
+      into v_line_qty
+      from jsonb_array_elements(v_line->'allocations') a;
+    else
+      v_line_qty := coalesce((v_line->>'quantity')::numeric, 0);
+    end if;
 
     if v_line_qty <= 0 then
-      raise exception 'Line % has no allocated quantity', v_order_item_id;
+      raise exception 'Line % has no quantity to dispatch', v_order_item_id;
     end if;
     if v_line_qty > v_oi_quantity - v_oi_delivered then
       raise exception 'Line % dispatch quantity % exceeds the % still outstanding on the order',
@@ -148,7 +158,9 @@ begin
     values (v_delivery_id, v_order_item_id, v_line_qty, v_oi_unit_price)
     returning id into v_delivery_item_id;
 
-    for v_alloc in select * from jsonb_array_elements(v_line->'allocations')
+    -- Batch allocations — skipped entirely for direct-from-stock lines.
+    for v_alloc in
+      select * from jsonb_array_elements(coalesce(v_line->'allocations', '[]'::jsonb))
     loop
       v_batch_id := (v_alloc->>'batch_id')::uuid;
       v_alloc_qty := (v_alloc->>'quantity')::numeric;

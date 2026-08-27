@@ -17,6 +17,10 @@ export type DispatchLine = {
   ordered: number
   delivered: number
   remaining: number
+  // 'batch'  — manufactured finished good, allocated across production batches
+  // 'direct' — resold raw material (milk, dahi), taken straight from stock
+  mode: 'batch' | 'direct'
+  stock: number
   batches: Batch[]
 }
 
@@ -40,6 +44,11 @@ function suggest(qty: number, batches: Batch[]): Record<string, string> {
   return out
 }
 
+function startQtyFor(l: DispatchLine) {
+  const cap = l.mode === 'direct' ? l.stock : l.batches.reduce((s, b) => s + b.remaining, 0)
+  return Math.min(l.remaining, cap)
+}
+
 type LineState = { dispatchQty: string; alloc: Record<string, string> }
 
 export default function DispatchForm({
@@ -52,10 +61,10 @@ export default function DispatchForm({
   const [state, setState] = useState<Record<string, LineState>>(() => {
     const init: Record<string, LineState> = {}
     for (const l of lines) {
-      const startQty = Math.min(l.remaining, sumRemaining(l.batches))
+      const q = startQtyFor(l)
       init[l.order_item_id] = {
-        dispatchQty: startQty > 0 ? String(startQty) : '',
-        alloc: suggest(startQty, l.batches),
+        dispatchQty: q > 0 ? String(q) : '',
+        alloc: l.mode === 'batch' ? suggest(q, l.batches) : {},
       }
     }
     return init
@@ -66,7 +75,10 @@ export default function DispatchForm({
   function setDispatchQty(l: DispatchLine, value: string) {
     setState((prev) => ({
       ...prev,
-      [l.order_item_id]: { dispatchQty: value, alloc: suggest(num(value), l.batches) },
+      [l.order_item_id]: {
+        dispatchQty: value,
+        alloc: l.mode === 'batch' ? suggest(num(value), l.batches) : {},
+      },
     }))
   }
 
@@ -87,11 +99,19 @@ export default function DispatchForm({
       const allocated = Object.values(s.alloc).reduce((sum, v) => sum + num(v), 0)
       const overBatch = l.batches.some((b) => num(s.alloc[b.batch_id] ?? '') > b.remaining + EPS)
       const matches = Math.abs(allocated - dispatchQty) < EPS
-      const valid =
-        dispatchQty <= EPS
-          ? true // an untouched line is fine, it just won't be dispatched
-          : dispatchQty <= l.remaining + EPS && matches && !overBatch
-      return { line: l, dispatchQty, allocated, overBatch, matches, valid }
+      const overStock = l.mode === 'direct' && dispatchQty > l.stock + EPS
+
+      let valid: boolean
+      if (dispatchQty <= EPS) {
+        valid = true // untouched line — just won't be dispatched
+      } else if (dispatchQty > l.remaining + EPS) {
+        valid = false
+      } else if (l.mode === 'direct') {
+        valid = !overStock
+      } else {
+        valid = matches && !overBatch
+      }
+      return { line: l, dispatchQty, allocated, overBatch, overStock, matches, valid }
     })
   }, [lines, state])
 
@@ -104,12 +124,16 @@ export default function DispatchForm({
       JSON.stringify(
         perLine
           .filter((p) => p.dispatchQty > EPS)
-          .map((p) => ({
-            order_item_id: p.line.order_item_id,
-            allocations: Object.entries(state[p.line.order_item_id].alloc)
-              .map(([batch_id, v]) => ({ batch_id, quantity: num(v) }))
-              .filter((a) => a.quantity > 0),
-          }))
+          .map((p) =>
+            p.line.mode === 'direct'
+              ? { order_item_id: p.line.order_item_id, quantity: p.dispatchQty }
+              : {
+                  order_item_id: p.line.order_item_id,
+                  allocations: Object.entries(state[p.line.order_item_id].alloc)
+                    .map(([batch_id, v]) => ({ batch_id, quantity: num(v) }))
+                    .filter((a) => a.quantity > 0),
+                }
+          )
       ),
     [perLine, state]
   )
@@ -119,10 +143,15 @@ export default function DispatchForm({
       <input type="hidden" name="order_id" value={orderId} />
       <input type="hidden" name="lines" value={payload} />
 
-      {perLine.map(({ line, dispatchQty, allocated, overBatch, matches }) => (
+      {perLine.map(({ line, dispatchQty, allocated, overBatch, overStock, matches }) => (
         <div key={line.order_item_id} style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16 }}>
-            <h2 style={{ fontSize: 16 }}>{line.product_name}</h2>
+            <h2 style={{ fontSize: 16 }}>
+              {line.product_name}
+              {line.mode === 'direct' && (
+                <span style={{ fontSize: 11, color: '#888', fontWeight: 400 }}> · from stock</span>
+              )}
+            </h2>
             <span style={{ fontSize: 12, color: '#888' }}>
               ordered {line.ordered} {line.unit} · delivered {line.delivered} · outstanding{' '}
               {line.remaining} {line.unit}
@@ -135,14 +164,26 @@ export default function DispatchForm({
               type="number"
               step="0.001"
               min="0"
-              max={line.remaining}
+              max={line.mode === 'direct' ? Math.min(line.remaining, line.stock) : line.remaining}
               value={state[line.order_item_id].dispatchQty}
               onChange={(e) => setDispatchQty(line, e.target.value)}
               style={{ display: 'block', width: 160, padding: 8, marginTop: 4 }}
             />
           </label>
 
-          {line.batches.length === 0 ? (
+          {line.mode === 'direct' ? (
+            <p
+              style={{
+                fontSize: 13,
+                marginTop: 10,
+                color: line.stock <= 0 || overStock ? '#a12622' : '#888',
+              }}
+            >
+              In stock: {Number(line.stock.toFixed(3))} {line.unit}
+              {line.stock <= 0 && ' · nothing to dispatch — add stock in Production first'}
+              {overStock && ' · dispatch quantity exceeds stock on hand'}
+            </p>
+          ) : line.batches.length === 0 ? (
             <p style={{ fontSize: 13, color: '#a12622', marginTop: 12 }}>
               No batch stock available for this product yet.
             </p>
@@ -151,7 +192,6 @@ export default function DispatchForm({
               <thead>
                 <tr style={{ textAlign: 'left', borderBottom: '1px solid #eee' }}>
                   <th style={{ padding: '6px 4px' }}>Batch</th>
-                  <th style={{ padding: '6px 4px' }}>Produced</th>
                   <th style={{ padding: '6px 4px' }}>Remaining</th>
                   <th style={{ padding: '6px 4px' }}>Allocate ({line.unit})</th>
                 </tr>
@@ -166,7 +206,6 @@ export default function DispatchForm({
                         {b.batch_no}
                         <div style={{ fontSize: 11 }}>{b.production_date}</div>
                       </td>
-                      <td style={{ padding: '6px 4px' }} />
                       <td style={{ padding: '6px 4px' }}>
                         {b.remaining} {line.unit}
                       </td>
@@ -193,7 +232,7 @@ export default function DispatchForm({
             </table>
           )}
 
-          {dispatchQty > EPS && (
+          {line.mode === 'batch' && dispatchQty > EPS && (
             <p
               style={{
                 fontSize: 13,
@@ -253,8 +292,4 @@ export default function DispatchForm({
       </div>
     </form>
   )
-}
-
-function sumRemaining(batches: Batch[]) {
-  return batches.reduce((s, b) => s + b.remaining, 0)
 }

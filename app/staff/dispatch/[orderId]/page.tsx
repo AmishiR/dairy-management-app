@@ -21,7 +21,7 @@ export default async function DispatchOrderPage({
       requested_delivery_date,
       status,
       customers(organization_name, customer_code, phone),
-      order_items(id, product_id, quantity, quantity_delivered, unit_price, products(product_name, unit))
+      order_items(id, product_id, quantity, quantity_delivered, unit_price, products(product_name, unit, is_raw_material))
     `)
     .eq('order_id', orderId)
     .maybeSingle()
@@ -72,22 +72,42 @@ export default async function DispatchOrderPage({
     }))
     .filter((b) => b.quantity_remaining > 0)
 
-  const lines = openItems.map((it: any) => ({
-    order_item_id: it.id,
-    product_name: it.products?.product_name ?? '',
-    unit: it.products?.unit ?? '',
-    ordered: Number(it.quantity),
-    delivered: Number(it.quantity_delivered),
-    remaining: Number(it.quantity) - Number(it.quantity_delivered),
-    batches: (batches ?? [])
-      .filter((b: any) => b.product_id === it.product_id)
-      .map((b: any) => ({
-        batch_id: b.batch_id,
-        batch_no: b.batch_no,
-        production_date: b.production_date,
-        remaining: Number(b.quantity_remaining),
-      })),
-  }))
+  // Resold raw materials (cow milk, buffalo milk, dahi …) are dispatched
+  // straight from inventory_balances — no batch. Everything else is
+  // batch-allocated.
+  const { data: balances } = await supabase
+    .from('inventory_balances')
+    .select('product_id, current_stock')
+    .in('product_id', productIds.length ? productIds : [NONE])
+
+  const stockByProduct: Record<string, number> = {}
+  ;(balances ?? []).forEach((b: any) => {
+    stockByProduct[b.product_id] = Number(b.current_stock)
+  })
+
+  const lines = openItems.map((it: any) => {
+    const direct = it.products?.is_raw_material === true
+    return {
+      order_item_id: it.id,
+      product_name: it.products?.product_name ?? '',
+      unit: it.products?.unit ?? '',
+      ordered: Number(it.quantity),
+      delivered: Number(it.quantity_delivered),
+      remaining: Number(it.quantity) - Number(it.quantity_delivered),
+      mode: direct ? ('direct' as const) : ('batch' as const),
+      stock: stockByProduct[it.product_id] ?? 0,
+      batches: direct
+        ? []
+        : batches
+            .filter((b) => b.product_id === it.product_id)
+            .map((b) => ({
+              batch_id: b.batch_id,
+              batch_no: b.batch_no,
+              production_date: b.production_date,
+              remaining: b.quantity_remaining,
+            })),
+    }
+  })
 
   const customer = (order as any).customers
 
@@ -111,7 +131,7 @@ export default async function DispatchOrderPage({
         <p style={{ color: 'red', fontSize: 14 }}>
           Could not load batch stock: {(batchErr ?? allocErr)?.message}. If this
           mentions <code>dispatch_allocations</code>, run{' '}
-          <code>app/supbse/migrations/dispatch.sql</code> in the Supabase SQL
+          <code>app/supabse/migrations/dispatch.sql</code> in the Supabase SQL
           Editor (it ends with a schema-cache reload).
         </p>
       )}
