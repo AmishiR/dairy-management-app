@@ -1,6 +1,7 @@
 import { createClient } from '@/app/lib/supabase/server'
 import { setCustomerPrice } from '../actions'
 import Link from 'next/link'
+import { CurrentPricesTable, PriceHistoryTable } from './PriceTables'
 
 export default async function CustomerPricingDetailPage({
   params,
@@ -51,7 +52,16 @@ export default async function CustomerPricingDetailPage({
     )
   }
 
-  const currentPrices = allPrices.filter((p) => !p.effective_to)
+  const historyRows = allPrices.map((row: any) => ({
+    id: row.id,
+    product_name: row.products?.product_name ?? '',
+    selling_price: row.selling_price,
+    effective_from: row.effective_from,
+    effective_to: row.effective_to,
+    created_at: row.created_at,
+    set_by: row.profiles?.full_name ?? 'Unknown staff',
+  }))
+  const currentPriceRows = historyRows.filter((p) => !p.effective_to)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -66,32 +76,7 @@ export default async function CustomerPricingDetailPage({
       {/* Current prices at a glance */}
       <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16 }}>
         <h2 style={{ fontSize: 16, marginBottom: 12 }}>Current Prices</h2>
-        {currentPrices.length === 0 ? (
-          <p style={{ fontSize: 13, color: '#999' }}>No prices set for this customer yet.</p>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-            <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '1px solid #eee' }}>
-                <th style={{ padding: '8px 4px' }}>Product</th>
-                <th style={{ padding: '8px 4px' }}>Price</th>
-                <th style={{ padding: '8px 4px' }}>Since</th>
-                <th style={{ padding: '8px 4px' }}>Set By</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentPrices.map((row: any) => (
-                <tr key={row.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                  <td style={{ padding: '8px 4px' }}>{row.products?.product_name}</td>
-                  <td style={{ padding: '8px 4px' }}>₹{row.selling_price}</td>
-                  <td style={{ padding: '8px 4px' }}>{row.effective_from}</td>
-                  <td style={{ padding: '8px 4px', color: '#888' }}>
-                    {row.profiles?.full_name ?? 'Unknown staff'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <CurrentPricesTable rows={currentPriceRows} />
       </div>
 
       {/* Set / change a price */}
@@ -151,42 +136,7 @@ export default async function CustomerPricingDetailPage({
       {/* Full history, this customer only */}
       <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16 }}>
         <h2 style={{ fontSize: 16, marginBottom: 12 }}>Full Price History</h2>
-        {allPrices.length === 0 ? (
-          <p style={{ fontSize: 13, color: '#999' }}>No history yet.</p>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-            <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '1px solid #eee' }}>
-                <th style={{ padding: '8px 4px' }}>Product</th>
-                <th style={{ padding: '8px 4px' }}>Price</th>
-                <th style={{ padding: '8px 4px' }}>From</th>
-                <th style={{ padding: '8px 4px' }}>To</th>
-                <th style={{ padding: '8px 4px' }}>Set By</th>
-                <th style={{ padding: '8px 4px' }}>Set On</th>
-              </tr>
-            </thead>
-            <tbody>
-              {allPrices.map((row: any) => (
-                <tr key={row.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                  <td style={{ padding: '8px 4px' }}>{row.products?.product_name}</td>
-                  <td style={{ padding: '8px 4px' }}>₹{row.selling_price}</td>
-                  <td style={{ padding: '8px 4px' }}>{row.effective_from}</td>
-                  <td style={{ padding: '8px 4px' }}>
-                    {row.effective_to ?? (
-                      <span style={{ color: '#1e7b34', fontSize: 12 }}>current</span>
-                    )}
-                  </td>
-                  <td style={{ padding: '8px 4px', color: '#888' }}>
-                    {row.profiles?.full_name ?? 'Unknown staff'}
-                  </td>
-                  <td style={{ padding: '8px 4px', color: '#888', fontSize: 12 }}>
-                    {new Date(row.created_at).toLocaleString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <PriceHistoryTable rows={historyRows} />
       </div>
     </div>
   )

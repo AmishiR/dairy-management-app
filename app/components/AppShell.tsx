@@ -3,8 +3,10 @@ import { logout } from '@/app/login/actions'
 export default function AppShell({ displayName, role, children }: any) {
   const navLinks = [
     { href: '/staff', label: 'Dashboard' },
+    { href: '/staff/customers', label: 'Customers' },
     { href: '/staff/products', label: 'Products' },
     { href: '/staff/orders', label: 'Orders' },
+    { href: '/staff/dispatch', label: 'Dispatch' },
     { href: '/staff/deliveries', label: 'Deliveries' },
     { href: '/staff/pricing/customer-prices', label: 'Customer Prices' },
     { href: '/staff/pricing/internal-costs', label: 'Internal Costs' },

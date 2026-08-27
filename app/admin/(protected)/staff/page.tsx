@@ -1,5 +1,6 @@
 import { createClient } from '@/app/lib/supabase/server'
 import { inviteStaff } from './actions'
+import StaffListTable from './StaffListTable'
 
 export default async function AdminStaffPage({
   searchParams,
@@ -65,34 +66,7 @@ export default async function AdminStaffPage({
       <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16 }}>
         <h2 style={{ fontSize: 16, marginBottom: 12 }}>Existing Staff & Admin</h2>
 
-        {(!staffList || staffList.length === 0) && (
-          <p style={{ fontSize: 13, color: '#999' }}>None yet.</p>
-        )}
-
-        {staffList && staffList.length > 0 && (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-            <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '1px solid #eee' }}>
-                <th style={{ padding: '8px 4px' }}>Name</th>
-                <th style={{ padding: '8px 4px' }}>Role</th>
-                <th style={{ padding: '8px 4px' }}>Status</th>
-                <th style={{ padding: '8px 4px' }}>Added</th>
-              </tr>
-            </thead>
-            <tbody>
-              {staffList.map((s) => (
-                <tr key={s.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                  <td style={{ padding: '8px 4px' }}>{s.full_name ?? '(not set yet)'}</td>
-                  <td style={{ padding: '8px 4px' }}>{s.role}</td>
-                  <td style={{ padding: '8px 4px' }}>{s.status}</td>
-                  <td style={{ padding: '8px 4px', color: '#888', fontSize: 12 }}>
-                    {new Date(s.created_at).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <StaffListTable rows={staffList ?? []} />
       </div>
     </div>
   )

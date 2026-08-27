@@ -1,5 +1,6 @@
 import { createClient } from '@/app/lib/supabase/server'
 import Link from 'next/link'
+import InputsTable from './InputsTable'
 
 export default async function BatchDetailPage({
   params,
@@ -36,6 +37,15 @@ export default async function BatchDetailPage({
       </div>
     )
   }
+
+  const inputRows = inputs.map((i: any) => ({
+    id: i.id,
+    product_name: i.products?.product_name ?? '',
+    unit: i.products?.unit ?? '',
+    quantity_used: i.quantity_used,
+    cost_per_unit: i.cost_per_unit,
+    total_cost: i.total_cost,
+  }))
 
   const milkTotal = inputs
     .filter((i: any) => i.products?.unit === 'L')
@@ -78,28 +88,7 @@ export default async function BatchDetailPage({
 
       <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16 }}>
         <h2 style={{ fontSize: 16, marginBottom: 12 }}>Inputs Used</h2>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-          <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '1px solid #eee' }}>
-              <th style={{ padding: '8px 4px' }}>Raw Material</th>
-              <th style={{ padding: '8px 4px' }}>Quantity Used</th>
-              <th style={{ padding: '8px 4px' }}>Cost / Unit (at the time)</th>
-              <th style={{ padding: '8px 4px' }}>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {inputs.map((i: any) => (
-              <tr key={i.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                <td style={{ padding: '8px 4px' }}>{i.products?.product_name}</td>
-                <td style={{ padding: '8px 4px' }}>
-                  {i.quantity_used} {i.products?.unit}
-                </td>
-                <td style={{ padding: '8px 4px' }}>₹{i.cost_per_unit}</td>
-                <td style={{ padding: '8px 4px' }}>₹{i.total_cost}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <InputsTable rows={inputRows} />
       </div>
 
       <p style={{ fontSize: 12, color: '#888' }}>

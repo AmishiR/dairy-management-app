@@ -1,5 +1,6 @@
 import { createClient } from '@/app/lib/supabase/server'
 import Link from 'next/link'
+import BatchesTable from './BatchesTable'
 
 export default async function BatchesListPage() {
   const supabase = await createClient()
@@ -35,6 +36,21 @@ export default async function BatchesListPage() {
     }
   })
 
+  const rows = batches.map((b: any) => {
+    const milkTotal = milkTotalByBatch[b.batch_id]
+    return {
+      batch_id: b.batch_id,
+      batch_no: b.batch_no,
+      product_name: b.products?.product_name ?? '',
+      production_date: b.production_date,
+      quantity_produced: b.quantity_produced,
+      unit: b.products?.unit ?? '',
+      total_input_cost: b.total_input_cost,
+      cost_per_unit: b.cost_per_unit,
+      yield_ratio: milkTotal ? b.quantity_produced / milkTotal : null,
+    }
+  })
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
@@ -45,55 +61,13 @@ export default async function BatchesListPage() {
       </div>
 
       <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-          <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '1px solid #eee' }}>
-              <th style={{ padding: '8px 4px' }}>Batch</th>
-              <th style={{ padding: '8px 4px' }}>Product</th>
-              <th style={{ padding: '8px 4px' }}>Date</th>
-              <th style={{ padding: '8px 4px' }}>Qty Produced</th>
-              <th style={{ padding: '8px 4px' }}>Total Cost</th>
-              <th style={{ padding: '8px 4px' }}>Cost / Unit</th>
-              <th style={{ padding: '8px 4px' }}>Yield (kg / L milk)</th>
-              <th style={{ padding: '8px 4px' }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {batches.map((b: any) => {
-              const milkTotal = milkTotalByBatch[b.batch_id]
-              const yieldRatio = milkTotal
-                ? (b.quantity_produced / milkTotal).toFixed(3)
-                : '—'
-              return (
-                <tr key={b.batch_id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                  <td style={{ padding: '8px 4px', color: '#888' }}>{b.batch_no}</td>
-                  <td style={{ padding: '8px 4px' }}>{b.products?.product_name}</td>
-                  <td style={{ padding: '8px 4px' }}>{b.production_date}</td>
-                  <td style={{ padding: '8px 4px' }}>
-                    {b.quantity_produced} {b.products?.unit}
-                  </td>
-                  <td style={{ padding: '8px 4px' }}>₹{b.total_input_cost}</td>
-                  <td style={{ padding: '8px 4px' }}>₹{b.cost_per_unit}</td>
-                  <td style={{ padding: '8px 4px' }}>{yieldRatio}</td>
-                  <td style={{ padding: '8px 4px' }}>
-                    <Link
-                      href={`/staff/production/batches/${b.batch_id}`}
-                      style={{ fontSize: 13, color: '#2563eb' }}
-                    >
-                      Details →
-                    </Link>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+        <BatchesTable rows={rows} />
       </div>
 
       <p style={{ fontSize: 12, color: '#888' }}>
         Yield = kg of finished good produced per liter of milk input (cow +
         buffalo combined). Higher is better. Dahi/starter inputs are
-        excluded from the milk total since they're not milk.
+        excluded from the milk total since they&apos;re not milk.
       </p>
     </div>
   )

@@ -1,5 +1,5 @@
 import { createClient } from '@/app/lib/supabase/server'
-import Link from 'next/link'
+import { RawMaterialsTable, CostHistoryTable } from './CostTables'
 
 // Landing page for Internal Costs: a directory of raw materials/overhead
 // items, plus the full cost history across ALL of them in one place.
@@ -43,6 +43,25 @@ export default async function InternalCostsListPage() {
     currentCostByProduct[c.product_id] = c.cost_price
   })
 
+  const rawMaterialRows = (rawMaterials ?? []).map((p) => ({
+    product_id: p.product_id,
+    product_code: p.product_code,
+    product_name: p.product_name,
+    unit: p.unit,
+    current_cost: currentCostByProduct[p.product_id] ?? null,
+  }))
+
+  const historyRows = (allCosts ?? []).map((row: any) => ({
+    id: row.id,
+    product_name: row.products?.product_name ?? '',
+    unit: row.products?.unit ?? '',
+    cost_price: row.cost_price,
+    effective_from: row.effective_from,
+    effective_to: row.effective_to,
+    created_at: row.created_at,
+    set_by: row.profiles?.full_name ?? 'Unknown staff',
+  }))
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div>
@@ -55,48 +74,7 @@ export default async function InternalCostsListPage() {
 
       <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16 }}>
         <h2 style={{ fontSize: 16, marginBottom: 12 }}>Raw Materials</h2>
-
-        {(!rawMaterials || rawMaterials.length === 0) && (
-          <p style={{ fontSize: 13, color: '#999' }}>
-            No raw materials yet. Add one from Products first.
-          </p>
-        )}
-
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-          <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '1px solid #eee' }}>
-              <th style={{ padding: '8px 4px' }}>Code</th>
-              <th style={{ padding: '8px 4px' }}>Raw Material</th>
-              <th style={{ padding: '8px 4px' }}>Unit</th>
-              <th style={{ padding: '8px 4px' }}>Current Cost</th>
-              <th style={{ padding: '8px 4px' }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rawMaterials?.map((p) => (
-              <tr key={p.product_id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                <td style={{ padding: '8px 4px', color: '#888' }}>{p.product_code}</td>
-                <td style={{ padding: '8px 4px' }}>{p.product_name}</td>
-                <td style={{ padding: '8px 4px' }}>{p.unit}</td>
-                <td style={{ padding: '8px 4px' }}>
-                  {currentCostByProduct[p.product_id] !== undefined ? (
-                    <>₹{currentCostByProduct[p.product_id]} / {p.unit}</>
-                  ) : (
-                    <span style={{ color: '#999', fontSize: 13 }}>Not set</span>
-                  )}
-                </td>
-                <td style={{ padding: '8px 4px' }}>
-                  <Link
-                    href={`/staff/pricing/internal-costs/${p.product_id}`}
-                    style={{ fontSize: 13, color: '#2563eb' }}
-                  >
-                    Manage Cost →
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <RawMaterialsTable rows={rawMaterialRows} />
       </div>
 
       {/* Consolidated history across every raw material — the only place
@@ -104,47 +82,7 @@ export default async function InternalCostsListPage() {
           of the per-item pages. */}
       <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16 }}>
         <h2 style={{ fontSize: 16, marginBottom: 12 }}>Full Cost History</h2>
-
-        {(!allCosts || allCosts.length === 0) && (
-          <p style={{ fontSize: 13, color: '#999' }}>No cost changes recorded yet.</p>
-        )}
-
-        {allCosts && allCosts.length > 0 && (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-            <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '1px solid #eee' }}>
-                <th style={{ padding: '8px 4px' }}>Raw Material</th>
-                <th style={{ padding: '8px 4px' }}>Cost</th>
-                <th style={{ padding: '8px 4px' }}>From</th>
-                <th style={{ padding: '8px 4px' }}>To</th>
-                <th style={{ padding: '8px 4px' }}>Set By</th>
-                <th style={{ padding: '8px 4px' }}>Set On</th>
-              </tr>
-            </thead>
-            <tbody>
-              {allCosts.map((row: any) => (
-                <tr key={row.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                  <td style={{ padding: '8px 4px' }}>{row.products?.product_name}</td>
-                  <td style={{ padding: '8px 4px' }}>
-                    ₹{row.cost_price} / {row.products?.unit}
-                  </td>
-                  <td style={{ padding: '8px 4px' }}>{row.effective_from}</td>
-                  <td style={{ padding: '8px 4px' }}>
-                    {row.effective_to ?? (
-                      <span style={{ color: '#1e7b34', fontSize: 12 }}>current</span>
-                    )}
-                  </td>
-                  <td style={{ padding: '8px 4px', color: '#888' }}>
-                    {row.profiles?.full_name ?? 'Unknown staff'}
-                  </td>
-                  <td style={{ padding: '8px 4px', color: '#888', fontSize: 12 }}>
-                    {new Date(row.created_at).toLocaleString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <CostHistoryTable rows={historyRows} />
       </div>
     </div>
   )

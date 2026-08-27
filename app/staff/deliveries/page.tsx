@@ -1,14 +1,12 @@
 import { createClient } from '@/app/lib/supabase/server'
-import { updateDelivery } from './actions'
-
-const deliveryStatuses = ['pending', 'partial', 'completed', 'cancelled']
+import DeliveriesTable from './DeliveriesTable'
 
 export default async function DeliveriesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; success?: string }>
 }) {
-  const { error } = await searchParams
+  const { error, success } = await searchParams
   const supabase = await createClient()
 
   const [deliveriesRes, duesRes] = await Promise.all([
@@ -27,7 +25,8 @@ export default async function DeliveriesPage({
           quantity,
           unit_price,
           total_amount,
-          order_items(products(product_name, unit))
+          order_items(products(product_name, unit)),
+          dispatch_allocations(quantity, production_batches(batch_no))
         )
       `)
       .order('delivery_date', { ascending: false })
@@ -44,6 +43,29 @@ export default async function DeliveriesPage({
     return Number(row?.balance_due ?? 0)
   }
 
+  const rows = deliveries.map((d: any) => ({
+    delivery_id: d.delivery_id,
+    delivery_date: d.delivery_date,
+    dm_number: d.dm_number,
+    order_no: d.orders?.order_no ?? null,
+    organization_name: d.customers?.organization_name ?? '',
+    customer_code: d.customers?.customer_code ?? '',
+    phone: d.customers?.phone ?? null,
+    due: dueForCustomer(d.customers?.customer_id),
+    items: (d.delivery_items ?? []).map(
+      (item: any) =>
+        `${item.order_items?.products?.product_name}: ${item.quantity} ${item.order_items?.products?.unit ?? ''}`.trim()
+    ),
+    batches: (d.delivery_items ?? []).flatMap((item: any) =>
+      (item.dispatch_allocations ?? []).map(
+        (a: any) => `${a.production_batches?.batch_no ?? '?'} × ${a.quantity}`
+      )
+    ),
+    order_total: d.orders?.total_amount ?? 0,
+    payment_status: d.orders?.payment_status ?? null,
+    status: d.status,
+  }))
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div>
@@ -53,6 +75,9 @@ export default async function DeliveriesPage({
         </p>
       </div>
 
+      {success === 'dispatched' && (
+        <p style={{ color: '#1e7b34', fontSize: 14 }}>Dispatch confirmed — delivery created.</p>
+      )}
       {error && <p style={{ color: 'red', fontSize: 14 }}>{error}</p>}
 
       {deliveriesRes.error && (
@@ -62,115 +87,12 @@ export default async function DeliveriesPage({
       )}
 
       {duesRes.error && (
-        <p style={{ color: 'red', fontSize: 14 }}>
-          Error loading dues: {duesRes.error.message}
-        </p>
+        <p style={{ color: 'red', fontSize: 14 }}>Error loading dues: {duesRes.error.message}</p>
       )}
 
       <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16 }}>
         <h2 style={{ fontSize: 16, marginBottom: 12 }}>Delivery List</h2>
-
-        {deliveries.length === 0 ? (
-          <p style={{ fontSize: 13, color: '#999' }}>No deliveries yet.</p>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-              <thead>
-                <tr style={{ textAlign: 'left', borderBottom: '1px solid #eee' }}>
-                  <th style={{ padding: '8px 4px' }}>Date</th>
-                  <th style={{ padding: '8px 4px' }}>DM</th>
-                  <th style={{ padding: '8px 4px' }}>Order</th>
-                  <th style={{ padding: '8px 4px' }}>Customer</th>
-                  <th style={{ padding: '8px 4px' }}>Phone</th>
-                  <th style={{ padding: '8px 4px' }}>Due</th>
-                  <th style={{ padding: '8px 4px' }}>Items</th>
-                  <th style={{ padding: '8px 4px' }}>Order Amount</th>
-                  <th style={{ padding: '8px 4px' }}>Payment</th>
-                  <th style={{ padding: '8px 4px' }}>Status</th>
-                  <th style={{ padding: '8px 4px' }}></th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {deliveries.map((delivery: any) => {
-                  const due = dueForCustomer(delivery.customers?.customer_id)
-
-                  return (
-                    <tr key={delivery.delivery_id} style={{ borderBottom: '1px solid #f5f5f5', verticalAlign: 'top' }}>
-                      <td style={{ padding: '8px 4px' }}>{delivery.delivery_date}</td>
-                      <td style={{ padding: '8px 4px' }}>{delivery.dm_number ?? '-'}</td>
-                      <td style={{ padding: '8px 4px' }}>{delivery.orders?.order_no ?? '-'}</td>
-
-                      <td style={{ padding: '8px 4px' }}>
-                        {delivery.customers?.organization_name}
-                        <div style={{ fontSize: 12, color: '#888' }}>
-                          {delivery.customers?.customer_code}
-                        </div>
-                      </td>
-
-                      <td style={{ padding: '8px 4px' }}>
-                        {delivery.customers?.phone ?? '-'}
-                      </td>
-
-                      <td
-                        style={{
-                          padding: '8px 4px',
-                          color: due > 0 ? '#a12622' : '#1e7b34',
-                          fontWeight: 600,
-                        }}
-                      >
-                        ₹{due}
-                      </td>
-
-                      <td style={{ padding: '8px 4px' }}>
-                        {delivery.delivery_items?.length ? (
-                          delivery.delivery_items.map((item: any) => (
-                            <div key={item.id}>
-                              {item.order_items?.products?.product_name}: {item.quantity}{' '}
-                              {item.order_items?.products?.unit}
-                            </div>
-                          ))
-                        ) : (
-                          <span style={{ color: '#999' }}>No items recorded</span>
-                        )}
-                      </td>
-
-                      <td style={{ padding: '8px 4px' }}>
-                        ₹{delivery.orders?.total_amount ?? 0}
-                      </td>
-
-                      <td style={{ padding: '8px 4px' }}>
-                        {delivery.orders?.payment_status ?? '-'}
-                      </td>
-
-                      <td style={{ padding: '8px 4px' }}>
-                        {delivery.status}
-                      </td>
-
-                      <td style={{ padding: '8px 4px' }}>
-                        <form action={updateDelivery} style={{ display: 'flex', gap: 8 }}>
-                          <input type="hidden" name="delivery_id" value={delivery.delivery_id} />
-
-                          <select name="status" defaultValue={delivery.status} style={{ padding: 6 }}>
-                            {deliveryStatuses.map((status) => (
-                              <option key={status} value={status}>
-                                {status}
-                              </option>
-                            ))}
-                          </select>
-
-                          <button type="submit" style={{ padding: '6px 10px', cursor: 'pointer' }}>
-                            Save
-                          </button>
-                        </form>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <DeliveriesTable rows={rows} />
       </section>
     </div>
   )

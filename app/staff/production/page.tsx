@@ -1,5 +1,6 @@
 import { createClient } from '@/app/lib/supabase/server'
 import Link from 'next/link'
+import { StockTable, RecentBatchesTable } from './ProductionTables'
 
 export default async function ProductionOverviewPage({
   searchParams,
@@ -26,8 +27,25 @@ export default async function ProductionOverviewPage({
   const balances = balancesRes.data ?? []
   const recentBatches = recentBatchesRes.data ?? []
 
-  const rawBalances = balances.filter((b: any) => b.products?.is_raw_material)
-  const finishedBalances = balances.filter((b: any) => b.products?.is_finished_good)
+  const toStockRow = (b: any) => ({
+    product_id: b.product_id,
+    product_name: b.products?.product_name ?? '',
+    unit: b.products?.unit ?? '',
+    current_stock: b.current_stock,
+  })
+
+  const rawBalances = balances.filter((b: any) => b.products?.is_raw_material).map(toStockRow)
+  const finishedBalances = balances.filter((b: any) => b.products?.is_finished_good).map(toStockRow)
+
+  const recentBatchRows = recentBatches.map((b: any) => ({
+    batch_id: b.batch_id,
+    batch_no: b.batch_no,
+    product_name: b.products?.product_name ?? '',
+    production_date: b.production_date,
+    quantity_produced: b.quantity_produced,
+    unit: b.products?.unit ?? '',
+    cost_per_unit: b.cost_per_unit,
+  }))
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -59,42 +77,12 @@ export default async function ProductionOverviewPage({
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
         <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16 }}>
           <h2 style={{ fontSize: 16, marginBottom: 12 }}>Raw Material Stock</h2>
-          {rawBalances.length === 0 ? (
-            <p style={{ fontSize: 13, color: '#999' }}>No stock recorded yet.</p>
-          ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-              <tbody>
-                {rawBalances.map((b: any) => (
-                  <tr key={b.product_id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                    <td style={{ padding: '8px 4px' }}>{b.products?.product_name}</td>
-                    <td style={{ padding: '8px 4px', textAlign: 'right', fontWeight: 600 }}>
-                      {b.current_stock} {b.products?.unit}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <StockTable rows={rawBalances} />
         </div>
 
         <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16 }}>
           <h2 style={{ fontSize: 16, marginBottom: 12 }}>Finished Goods Stock</h2>
-          {finishedBalances.length === 0 ? (
-            <p style={{ fontSize: 13, color: '#999' }}>No stock recorded yet.</p>
-          ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-              <tbody>
-                {finishedBalances.map((b: any) => (
-                  <tr key={b.product_id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                    <td style={{ padding: '8px 4px' }}>{b.products?.product_name}</td>
-                    <td style={{ padding: '8px 4px', textAlign: 'right', fontWeight: 600 }}>
-                      {b.current_stock} {b.products?.unit}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <StockTable rows={finishedBalances} />
         </div>
       </div>
 
@@ -105,34 +93,7 @@ export default async function ProductionOverviewPage({
             View all →
           </Link>
         </div>
-        {recentBatches.length === 0 ? (
-          <p style={{ fontSize: 13, color: '#999' }}>No batches recorded yet.</p>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-            <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '1px solid #eee' }}>
-                <th style={{ padding: '8px 4px' }}>Batch</th>
-                <th style={{ padding: '8px 4px' }}>Product</th>
-                <th style={{ padding: '8px 4px' }}>Date</th>
-                <th style={{ padding: '8px 4px' }}>Qty Produced</th>
-                <th style={{ padding: '8px 4px' }}>Cost / Unit</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentBatches.map((b: any) => (
-                <tr key={b.batch_id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                  <td style={{ padding: '8px 4px', color: '#888' }}>{b.batch_no}</td>
-                  <td style={{ padding: '8px 4px' }}>{b.products?.product_name}</td>
-                  <td style={{ padding: '8px 4px' }}>{b.production_date}</td>
-                  <td style={{ padding: '8px 4px' }}>
-                    {b.quantity_produced} {b.products?.unit}
-                  </td>
-                  <td style={{ padding: '8px 4px' }}>₹{b.cost_per_unit}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <RecentBatchesTable rows={recentBatchRows} />
       </div>
     </div>
   )
