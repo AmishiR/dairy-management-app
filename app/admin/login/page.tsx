@@ -15,53 +15,105 @@ export default async function AdminLoginPage({
         minHeight: '100vh',
         alignItems: 'center',
         justifyContent: 'center',
-        fontFamily: 'sans-serif',
+        background: 'linear-gradient(180deg, #FFFFFF 0%, var(--color-surface) 100%)',
+        padding: '24px',
       }}
     >
       <form
         action={adminLogin}
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-          width: 320,
-          padding: 24,
-          border: '1px solid #333',
-          borderRadius: 8,
+        className="ui-form ui-card"
+        style={{ 
+          width: '100%', 
+          maxWidth: '400px', 
+          padding: '40px',
+          borderTop: '6px solid var(--color-accent)', // Branded accent bar
+          boxShadow: 'var(--shadow-md)'
         }}
       >
-        <h1 style={{ fontSize: 20, marginBottom: 8 }}>Admin Login</h1>
+        <div style={{ marginBottom: 32, textAlign: 'center' }}>
+          <div 
+            style={{ 
+              display: 'inline-block', 
+              padding: '8px 12px', 
+              background: 'var(--color-accent-soft)', 
+              borderRadius: '8px',
+              marginBottom: '16px'
+            }}
+          >
+            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-accent)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              Secure Portal
+            </span>
+          </div>
+          <h1 style={{ 
+            fontFamily: 'var(--font-display)', 
+            fontSize: '28px', 
+            fontWeight: 600, 
+            margin: 0,
+            color: 'var(--color-text)' 
+          }}>
+            Admin Sign in
+          </h1>
+          <p style={{ fontSize: '14px', color: 'var(--color-text-secondary)', marginTop: 8 }}>
+            Please enter your administrative credentials.
+          </p>
+        </div>
 
-        {error && <p style={{ color: 'red', fontSize: 14 }}>{error}</p>}
+        {error && (
+          <div style={{ marginBottom: '20px' }}>
+            <p className="ui-error" style={{ textAlign: 'center' }}>{error}</p>
+          </div>
+        )}
 
-        <label style={{ fontSize: 14 }}>
-          Email
-          <input
-            type="email"
-            name="email"
-            required
-            style={{ width: '100%', padding: 8, marginTop: 4 }}
-          />
-        </label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <label className="ui-field">
+            Admin Email
+            <input 
+              type="email" 
+              name="email" 
+              required 
+              className="ui-input" 
+              placeholder="admin@puredairy.com"
+            />
+          </label>
 
-        <label style={{ fontSize: 14 }}>
-          Password
-          <input
-            type="password"
-            name="password"
-            required
-            style={{ width: '100%', padding: 8, marginTop: 4 }}
-          />
-        </label>
+          <label className="ui-field">
+            Password
+            <input 
+              type="password" 
+              name="password" 
+              required 
+              className="ui-input" 
+              placeholder="••••••••"
+            />
+          </label>
 
-        <button type="submit" style={{ padding: 10, marginTop: 8, cursor: 'pointer' }}>
-          Log in as Admin
-        </button>
+          <button 
+            type="submit" 
+            className="ui-btn ui-btn-primary" 
+            style={{ 
+              marginTop: '10px',
+              padding: '12px',
+              fontSize: '15px'
+            }}
+          >
+            Sign in as Administrator
+          </button>
 
-        <div style={{ textAlign: 'center', marginTop: 8 }}>
-          <Link href="/login" style={{ fontSize: 13, color: '#2563eb' }}>
-            ← Back to staff login
-          </Link>
+          <div style={{ textAlign: 'center', marginTop: '12px' }}>
+            <Link 
+              href="/login" 
+              className="ui-link" 
+              style={{ 
+                fontSize: '13px', 
+                color: 'var(--color-text-secondary)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <span>←</span> Back to staff login
+            </Link>
+          </div>
         </div>
       </form>
     </div>

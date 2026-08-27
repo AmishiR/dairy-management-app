@@ -1,9 +1,6 @@
 import { createClient } from '@/app/lib/supabase/server'
+import Link from 'next/link'
 
-// This is the exact content that used to live directly in app/staff/page.tsx.
-// It's now a shared component so /admin/dashboard can reuse it instead of
-// duplicating the dashboard — per the requirement to reuse existing UI
-// wherever possible rather than rebuilding it.
 export default async function DashboardOverview() {
   const supabase = await createClient()
 
@@ -15,14 +12,18 @@ export default async function DashboardOverview() {
   ] = await Promise.all([
     supabase
       .from('orders')
-      .select('order_id, order_no, requested_delivery_date, status, total_amount, customers(organization_name)')
+      .select(
+        'order_id, order_no, requested_delivery_date, status, total_amount, customers(organization_name)'
+      )
       .not('status', 'in', '(delivered,cancelled)')
       .order('requested_delivery_date', { ascending: true })
       .limit(10),
 
     supabase
       .from('payments')
-      .select('payment_id, amount, transaction_reference, submitted_at, customers(organization_name)')
+      .select(
+        'payment_id, amount, transaction_reference, submitted_at, customers(organization_name)'
+      )
       .in('status', ['pending', 'submitted'])
       .order('submitted_at', { ascending: true })
       .limit(10),
@@ -50,97 +51,405 @@ export default async function DashboardOverview() {
     : { data: [] }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <h1 style={{ fontSize: 22 }}>Dashboard</h1>
+    <div>
+      {/* Dashboard Header */}
+      <div
+        className="ui-page-header"
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 24,
+        }}
+      >
+        <div>
+          <h1 className="ui-page-title">Dashboard</h1>
+          <p className="ui-page-subtitle">
+            Today&apos;s operations at a glance.
+          </p>
+        </div>
 
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        <SummaryCard label="Pending Orders" value={pendingOrders.length} />
-        <SummaryCard label="Payments Awaiting Verification" value={pendingPayments.length} />
-        <SummaryCard label="Customers With Dues" value={dues.length} />
+        {/* Add Staff */}
+        <Link
+          href="/admin/staff"
+          className="ui-btn-primary"
+          style={{
+            textDecoration: 'none',
+            padding: '10px 18px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          + Add New Staff
+        </Link>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="ui-summary-row">
+        <SummaryCard
+          label="Pending Orders"
+          value={pendingOrders.length}
+        />
+
+        <SummaryCard
+          label="Payments Awaiting Verification"
+          value={pendingPayments.length}
+        />
+
+        <SummaryCard
+          label="Customers With Dues"
+          value={dues.length}
+        />
+
         <SummaryCard
           label="Next Production Date"
-          value={nextDeliveryDate ? new Date(nextDeliveryDate).toLocaleDateString() : '—'}
+          value={
+            nextDeliveryDate
+              ? new Date(nextDeliveryDate).toLocaleDateString('en-IN', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                })
+              : '—'
+          }
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-        <Section title="Pending Orders / Deliveries">
-          {pendingOrders.length === 0 && <EmptyState text="No pending orders." />}
-          {pendingOrders.map((o: any) => (
-            <Row key={o.order_id}>
-              <span>{o.order_no}</span>
-              <span>{o.customers?.organization_name}</span>
-              <span>{o.requested_delivery_date}</span>
-              <StatusBadge status={o.status} />
-            </Row>
-          ))}
-        </Section>
+      {/* Dashboard Cards */}
+      <div
+        className="ui-grid-2"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+          gap: 20,
+          marginTop: 24,
+        }}
+      >
+        {/* Pending Orders */}
+        <div className="ui-card">
+          <h2 className="ui-card-title">
+            Pending Orders / Deliveries
+          </h2>
 
-        <Section title="Payments Awaiting Verification">
-          {pendingPayments.length === 0 && <EmptyState text="No payments waiting." />}
-          {pendingPayments.map((p: any) => (
-            <Row key={p.payment_id}>
-              <span>{p.customers?.organization_name}</span>
-              <span>₹{p.amount}</span>
-              <span style={{ fontSize: 12, color: '#888' }}>{p.transaction_reference}</span>
-            </Row>
-          ))}
-        </Section>
-
-        <Section title={`Production Needed (${nextDeliveryDate ?? '—'})`}>
-          {(!productionRequirements || productionRequirements.length === 0) && (
-            <EmptyState text="Nothing to produce for the next delivery date yet." />
+          {pendingOrders.length === 0 && (
+            <div className="ui-empty">
+              No pending orders.
+            </div>
           )}
-          {productionRequirements?.map((r: any) => (
-            <Row key={r.product_id}>
-              <span>{r.product_name}</span>
-              <span>{r.total_quantity_required}</span>
-            </Row>
-          ))}
-        </Section>
 
-        <Section title="Top Customer Dues">
-          {dues.length === 0 && <EmptyState text="No outstanding balances." />}
-          {dues.map((d: any) => (
-            <Row key={d.customer_id}>
-              <span>{d.organization_name}</span>
-              <span>₹{d.balance_due}</span>
-            </Row>
-          ))}
-        </Section>
+          {pendingOrders.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              {pendingOrders.map((o: any) => (
+                <Row key={o.order_id}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      minWidth: 0,
+                    }}
+                  >
+                    <span style={{ fontWeight: 600 }}>
+                      {o.order_no}
+                    </span>
+
+                    <span
+                      style={{
+                        color: 'var(--color-text-secondary)',
+                        fontSize: 12,
+                        marginTop: 3,
+                      }}
+                    >
+                      {o.customers?.organization_name ?? 'Unknown customer'}
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      textAlign: 'right',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <StatusBadge status={o.status} />
+
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: 'var(--color-text-muted)',
+                        marginTop: 5,
+                      }}
+                    >
+                      {o.requested_delivery_date}
+                    </div>
+                  </div>
+                </Row>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Payments */}
+        <div className="ui-card">
+          <h2 className="ui-card-title">
+            Payments Awaiting Verification
+          </h2>
+
+          {pendingPayments.length === 0 && (
+            <div className="ui-empty">
+              No payments waiting.
+            </div>
+          )}
+
+          {pendingPayments.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              {pendingPayments.map((p: any) => (
+                <Row key={p.payment_id}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      minWidth: 0,
+                    }}
+                  >
+                    <span style={{ fontWeight: 600 }}>
+                      {p.customers?.organization_name ??
+                        'Unknown customer'}
+                    </span>
+
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color: 'var(--color-text-muted)',
+                        marginTop: 3,
+                      }}
+                    >
+                      Ref: {p.transaction_reference}
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      textAlign: 'right',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontWeight: 700,
+                        color: 'var(--color-accent)',
+                      }}
+                    >
+                      ₹{Number(p.amount).toLocaleString('en-IN')}
+                    </div>
+                  </div>
+                </Row>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Production */}
+        <div
+          className="ui-card"
+          style={{
+            background: 'var(--color-accent)',
+            color: 'white',
+          }}
+        >
+          <h2
+            className="ui-card-title"
+            style={{
+              color: 'white',
+              marginBottom: 12,
+            }}
+          >
+            Production Needed
+            {nextDeliveryDate
+              ? ` — ${new Date(nextDeliveryDate).toLocaleDateString(
+                  'en-IN',
+                  {
+                    day: '2-digit',
+                    month: 'short',
+                  }
+                )}`
+              : ''}
+          </h2>
+
+          {(!productionRequirements ||
+            productionRequirements.length === 0) && (
+            <div
+              className="ui-empty"
+              style={{
+                color: 'rgba(255,255,255,0.7)',
+              }}
+            >
+              Nothing to produce for the next delivery date yet.
+            </div>
+          )}
+
+          {productionRequirements &&
+            productionRequirements.length > 0 && (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                {productionRequirements.map((r: any) => (
+                  <div
+                    key={r.product_id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '12px 0',
+                      borderBottom:
+                        '1px solid rgba(255,255,255,0.15)',
+                    }}
+                  >
+                    <span style={{ fontWeight: 500 }}>
+                      {r.product_name}
+                    </span>
+
+                    <span style={{ fontWeight: 700 }}>
+                      {r.total_quantity_required} units
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+        </div>
+
+        {/* Customer Dues */}
+        <div className="ui-card">
+          <h2 className="ui-card-title">
+            Top Customer Dues
+          </h2>
+
+          {dues.length === 0 && (
+            <div className="ui-empty">
+              No outstanding balances.
+            </div>
+          )}
+
+          {dues.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              {dues.map((d: any) => (
+                <Row key={d.customer_id}>
+                  <span style={{ fontWeight: 600 }}>
+                    {d.organization_name}
+                  </span>
+
+                  <span
+                    style={{
+                      color: 'var(--color-danger)',
+                      fontWeight: 700,
+                    }}
+                  >
+                    ₹{Number(d.balance_due).toLocaleString('en-IN')}
+                  </span>
+                </Row>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Responsive Grid */}
+      <style>{`
+        @media (max-width: 900px) {
+          .ui-grid-2 {
+            grid-template-columns: 1fr !important;
+          }
+
+          .ui-page-header {
+            align-items: flex-start !important;
+            gap: 16px;
+          }
+        }
+
+        @media (max-width: 600px) {
+          .ui-page-header {
+            flex-direction: column !important;
+          }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+/* Summary Card */
+function SummaryCard({
+  label,
+  value,
+}: {
+  label: string
+  value: string | number
+}) {
+  return (
+    <div
+      className="ui-summary-card"
+      style={{
+        borderBottom:
+          '4px solid var(--color-accent-soft)',
+      }}
+    >
+      <div
+        className="ui-summary-label"
+        style={{
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          fontSize: 11,
+        }}
+      >
+        {label}
+      </div>
+
+      <div
+        className="ui-summary-value"
+        style={{
+          color: 'var(--color-accent)',
+        }}
+      >
+        {value}
       </div>
     </div>
   )
 }
 
-function SummaryCard({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div style={{ flex: '1 1 200px', border: '1px solid #ddd', borderRadius: 8, padding: 16 }}>
-      <div style={{ fontSize: 13, color: '#888' }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 600 }}>{value}</div>
-    </div>
-  )
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16 }}>
-      <h2 style={{ fontSize: 16, marginBottom: 12 }}>{title}</h2>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{children}</div>
-    </div>
-  )
-}
-
-function Row({ children }: { children: React.ReactNode }) {
+/* Dashboard Row */
+function Row({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
     <div
       style={{
         display: 'flex',
         justifyContent: 'space-between',
-        gap: 12,
-        fontSize: 14,
-        borderBottom: '1px solid #f0f0f0',
-        paddingBottom: 8,
+        alignItems: 'center',
+        gap: 16,
+        fontSize: 13.5,
+        padding: '12px 0',
+        borderBottom:
+          '1px solid var(--color-surface-2)',
       }}
     >
       {children}
@@ -148,23 +457,30 @@ function Row({ children }: { children: React.ReactNode }) {
   )
 }
 
-function EmptyState({ text }: { text: string }) {
-  return <p style={{ fontSize: 13, color: '#999' }}>{text}</p>
-}
+/* Status Badge */
+function StatusBadge({
+  status,
+}: {
+  status: string
+}) {
+  const variant =
+    status === 'delivered'
+      ? 'ui-badge-success'
+      : status === 'cancelled'
+        ? 'ui-badge-danger'
+        : status === 'pending'
+          ? 'ui-badge-warning'
+          : 'ui-badge-accent'
 
-function StatusBadge({ status }: { status: string }) {
   return (
     <span
+      className={`ui-badge ${variant}`}
       style={{
-        fontSize: 11,
-        padding: '2px 8px',
-        borderRadius: 12,
-        background: '#eef',
-        color: '#334',
-        whiteSpace: 'nowrap',
+        fontSize: 10,
+        textTransform: 'capitalize',
       }}
     >
-      {status}
+      {status.replace(/_/g, ' ')}
     </span>
   )
 }

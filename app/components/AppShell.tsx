@@ -1,62 +1,39 @@
 import { logout } from '@/app/login/actions'
 
-type NavLink = { href: string; label: string }
-
-// Shared shell for the (now unified) dashboard. Base links are the same
-// for everyone; extraNavLinks is how role-specific extras (Add Staff, for
-// admin) get added on top — passed in by the layout that renders this.
-export default function AppShell({
-  displayName,
-  role,
-  extraNavLinks = [],
-  children,
-}: {
-  displayName: string
-  role: string
-  extraNavLinks?: NavLink[]
-  children: React.ReactNode
-}) {
-  const baseNavLinks: NavLink[] = [
+export default function AppShell({ displayName, role, children }: any) {
+  const navLinks = [
     { href: '/staff', label: 'Dashboard' },
     { href: '/staff/products', label: 'Products' },
+    { href: '/staff/orders', label: 'Orders' },
+    { href: '/staff/deliveries', label: 'Deliveries' },
     { href: '/staff/pricing/customer-prices', label: 'Customer Prices' },
     { href: '/staff/pricing/internal-costs', label: 'Internal Costs' },
     { href: '/staff/production', label: 'Production' },
+    
   ]
 
   return (
-    <div style={{ fontFamily: 'sans-serif' }}>
-      <header
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '12px 24px',
-          borderBottom: '1px solid #ddd',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-          <strong>Dairy Dashboard</strong>
-          <nav style={{ display: 'flex', gap: 16, fontSize: 14 }}>
-            {[...baseNavLinks, ...extraNavLinks].map((link) => (
-              <a key={link.href} href={link.href}>
-                {link.label}
-              </a>
+    <div className="ui-shell">
+      <header className="ui-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '48px' }}>
+          <span className="ui-brand">PureDairy</span>
+          <nav className="ui-nav" style={{ display: 'flex', gap: '8px' }}>
+            {navLinks.map((link) => (
+              <a key={link.href} href={link.href}>{link.label}</a>
             ))}
           </nav>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 14, color: '#555' }}>
-            {displayName} ({role})
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600 }}>{displayName}</div>
+            <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>{role}</div>
+          </div>
           <form action={logout}>
-            <button type="submit" style={{ cursor: 'pointer' }}>
-              Log out
-            </button>
+            <button className="ui-btn-primary" style={{ padding: '8px 16px', fontSize: '13px' }}>Logout</button>
           </form>
         </div>
       </header>
-      <main style={{ padding: 24 }}>{children}</main>
+      <main className="ui-main">{children}</main>
     </div>
   )
 }

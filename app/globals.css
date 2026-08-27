@@ -1,26 +1,162 @@
-@import "tailwindcss";
-
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Surfaces - The "Milk & Ice" palette */
+  --color-bg: #ffffff;
+  --color-surface: #f8fbff;
+  --color-surface-2: #f0f4f8;
+  --color-border: #e1e8f0;
+  --color-border-strong: #cfd9e5;
+
+  /* Text */
+  --color-text: #1a1f26;
+  --color-text-secondary: #5c697a;
+  --color-text-muted: #94a3b8;
+
+  /* Accent — Premium Blue (Cold & Fresh) */
+  --color-accent: #007aff;
+  --color-accent-hover: #0062cc;
+  --color-accent-soft: #eaf4ff;
+  --color-accent-soft-border: #d4e8ff;
+
+  /* Semantic status */
+  --color-success: #10b981;
+  --color-success-soft: #ecfdf5;
+  --color-warning: #f59e0b;
+  --color-warning-soft: #fffbeb;
+  --color-danger: #ef4444;
+  --color-danger-soft: #fef2f2;
+
+  /* Shape & elevation - Softer, more modern */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --shadow-sm: 0 2px 4px rgba(0, 122, 255, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-md: 0 10px 25px -5px rgba(0, 122, 255, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+
+  /* Type */
+  --font-body: var(--font-inter), -apple-system, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+* { box-sizing: border-box; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* Layout Shell */
+.ui-shell { min-height: 100vh; background: var(--color-surface); }
+
+.ui-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 40px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.ui-brand {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-accent);
+  letter-spacing: -0.02em;
+}
+
+.ui-nav a {
+  padding: 8px 16px;
+  border-radius: 99px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.ui-nav a:hover {
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+/* Page Elements */
+.ui-main { max-width: 1300px; margin: 0 auto; padding: 40px; }
+
+.ui-page-title {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+
+.ui-card {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.ui-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.ui-summary-card {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  flex: 1;
+  border-bottom: 3px solid var(--color-accent-soft);
+}
+
+.ui-summary-value {
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: var(--color-accent);
+}
+
+/* Forms & Buttons */
+.ui-btn-primary {
+  background: var(--color-accent);
+  color: white;
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.2);
+}
+
+.ui-input {
+  padding: 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.ui-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  background: white;
+  box-shadow: 0 0 0 4px var(--color-accent-soft);
+}
+
+.ui-badge {
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.ui-badge-accent { background: var(--color-accent-soft); color: var(--color-accent); }
